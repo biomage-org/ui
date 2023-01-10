@@ -52,6 +52,17 @@ const seekFromS3 = async (ETag, experimentId, taskName) => {
   return parsedResult;
 };
 
+// getTimeoutDate returns the date resulting of adding 'timeout' seconds to
+// current time.
+const getTimeoutDate = (timeout) => dayjs().add(timeout, 's').toISOString();
+
+const resetTimeout = (id, request, newTimeout, reject, ETag) => {
+  clearTimeout(id);
+  setTimeout(() => {
+    reject(new WorkTimeoutError(newTimeout, getTimeoutDate(newTimeout), request, ETag));
+  }, (newTimeout) * 1000);
+};
+
 const dispatchWorkRequest = async (
   experimentId,
   body,
@@ -59,11 +70,14 @@ const dispatchWorkRequest = async (
   ETag,
   requestProps,
 ) => {
-  console.error('dispatching work request', body);
   const { default: connectionPromise } = await import('utils/socketConnection');
   const io = await connectionPromise;
 
+  // this timeout is how much we expect to be waiting for a given task,
+  // it can be refreshed (as opposed to the worker timeout)
   const timeoutDate = dayjs().add(timeout, 's').toISOString();
+  // if the worker encounters this timeout it will ignore the message
+  const workerTimeoutDate = dayjs().add(1800, 's').toISOString();
   const authJWT = await getAuthJWT();
 
   const request = {
@@ -71,26 +85,44 @@ const dispatchWorkRequest = async (
     socketId: io.id,
     experimentId,
     ...(authJWT && { Authorization: `Bearer ${authJWT}` }),
-    timeout: timeoutDate,
+    timeout: workerTimeoutDate,
     body,
     ...requestProps,
   };
+  console.error(`dispatch: ${ETag} [UI, worker]:  [${dayjs().toISOString()}+${timeout} (${timeoutDate}),  ${workerTimeoutDate}]`, body);
 
   const timeoutPromise = new Promise((resolve, reject) => {
     const id = setTimeout(() => {
-      reject(new WorkTimeoutError(timeoutDate, request));
+      reject(new WorkTimeoutError(timeout, timeoutDate, request, ETag));
     }, timeout * 1000);
 
     io.on(`WorkerInfo-${experimentId}`, (res) => {
       const { response: { podInfo: { name, creationTimestamp, phase } } } = res;
-
+      console.log('received worker info: ', res); // TODO: remove
       const extraTime = getRemainingWorkerStartTime(creationTimestamp);
+
+      // this worker info indicates that the work request has been received but the worker
+      // is still spinning up so we will add extra time to account for that.
       if (phase === 'Pending' && extraTime > 0) {
-        console.log(`worker ${name} started at ${creationTimestamp}. Adding ${extraTime} seconds to timeout.`);
-        clearTimeout(id);
-        setTimeout(() => {
-          reject(new WorkTimeoutError(timeoutDate, request));
-        }, (timeout + extraTime) * 1000);
+        console.log(`WorkerInfo-${experimentId}: ${ETag} ${name} [${creationTimestamp}]: adding ${extraTime} seconds to timeout at ${dayjs().toISOString()}.`);
+        const newTimeout = timeout + extraTime;
+        resetTimeout(id, request, newTimeout, reject, ETag);
+      }
+    });
+
+    // this experiment update is received whenever a worker finishes any work request
+    // related to the current experiment. We extend the timeout because we know
+    // the worker is alive and was working on another request of our experiment //
+    // (so this request was in queue)
+    io.on(`Heartbeat-${experimentId}`, (res) => {
+      // const { request: completedRequest } = res;
+      console.log('received experiment update: ', res); // TODO: remove
+      const newTimeoutDate = getTimeoutDate(timeout);
+      if (newTimeoutDate < workerTimeoutDate) {
+        console.log(`Heartbeat-${experimentId}: ${ETag} refreshing ${timeout} seconds timeout at ${dayjs().toISOString()}.`);
+        resetTimeout(id, request, timeout, reject, ETag);
+      } else {
+        console.log(`Heartbeat-${experimentId}: ${ETag} not refreshing ${newTimeoutDate} < ${workerTimeoutDate} at ${dayjs().toISOString()}.`);
       }
     });
   });
