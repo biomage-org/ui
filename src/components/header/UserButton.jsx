@@ -7,7 +7,7 @@ import {
 } from 'antd';
 import Link from 'next/link';
 import { Hub } from '@aws-amplify/core';
-import Auth from '@aws-amplify/auth';
+import { Auth } from '@aws-amplify/auth';
 import endUserMessages from 'utils/endUserMessages';
 import { resetTrackingId } from 'utils/tracking';
 import handleError from 'utils/http/handleError';

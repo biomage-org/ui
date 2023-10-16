@@ -1,4 +1,4 @@
-import Auth from '@aws-amplify/auth';
+import { Auth } from '@aws-amplify/auth';
 import { USER_LOADED } from 'redux/actionTypes/user';
 
 const loadUser = () => async (dispatch) => {
