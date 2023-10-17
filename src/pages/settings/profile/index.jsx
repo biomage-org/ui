@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Auth } from '@aws-amplify/auth';
+import Auth from '@aws-amplify/auth';
 import nextConfig from 'next/config';
 import _ from 'lodash';
 import {

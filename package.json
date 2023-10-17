@@ -43,7 +43,7 @@
     "@ant-design/colors": "^6.0.0",
     "@ant-design/icons": "^4.2.1",
     "@aws-amplify/auth": "^4.6.17",
-    "@aws-amplify/core": "^4.7.15",
+    "@aws-amplify/core": "^5.8.5",
     "@aws-sdk/client-cognito-identity": "^3.11.0",
     "@aws-sdk/client-cognito-identity-provider": "^3.11.0",
     "@aws-sdk/client-sts": "^3.12.0",

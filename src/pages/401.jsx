@@ -1,7 +1,7 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import { Result, Button, Typography } from 'antd';
-import { Auth } from '@aws-amplify/auth';
+import Auth from '@aws-amplify/auth';
 import FeedbackButton from 'components/header/FeedbackButton';
 
 const { Title } = Typography;

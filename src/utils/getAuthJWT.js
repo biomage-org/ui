@@ -1,4 +1,4 @@
-import { Auth } from '@aws-amplify/auth';
+import Auth from '@aws-amplify/auth';
 
 const getAuthJWT = async () => {
   let authJWT = null;
