@@ -11,6 +11,11 @@ const calculatePipelinesRerunStatus = (
   const gem2sRerunStatus = calculateGem2sRerunStatus(gem2sBackendStatus, activeExperiment);
   const qcRerunStatus = calculateQCRerunStatus(qcBackendStatus, gem2sBackendStatus);
 
+  console.log('qcRerunStatusDebug');
+  console.log(qcRerunStatus);
+  console.log('gem2sRerunStatusDebug');
+  console.log(gem2sRerunStatus);
+
   if (gem2sRerunStatus.rerun) {
     return {
       runPipeline: isTechSeurat ? runSeurat : runGem2s,
